@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Đơn Hàng - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="aside.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-width: 250px;
+        }
+        
+        body {
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+
+        .order-card {
+            transition: all 0.3s ease;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+        .order-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .status-badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .status-pending {
+            background-color: #ffd700;
+            color: #000;
+        }
+        .status-processing {
+            background-color: #87ceeb;
+            color: #000;
+        }
+        .status-completed {
+            background-color: #90ee90;
+            color: #000;
+        }
+        .status-cancelled {
+            background-color: #ff6b6b;
+            color: #fff;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Container -->
+    <div id="sidebar-container"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Danh Sách Đơn Hàng</h1>
+                <button class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Thêm Đơn Hàng
+                </button>
+            </div>
+            <div class="row" id="orderList">
+                <!-- Orders will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Load aside content
+        fetch('aside.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('sidebar-container').innerHTML = html;
+            })
+            .catch(error => console.error('Error loading aside:', error));
+
+        // Sample order data (replace with your actual data source)
+        let orders = [
+            {
+                id: "DH001",
+                products: "Laptop Dell XPS 13",
+                total: "25,000,000đ",
+                status: "pending",
+                lastUpdate: new Date()
+            },
+            {
+                id: "DH002",
+                products: "iPhone 13 Pro",
+                total: "18,500,000đ",
+                status: "processing",
+                lastUpdate: new Date()
+            }
+        ];
+
+        // Status mapping
+        const statusMap = {
+            pending: { text: "Chờ xử lý", class: "status-pending" },
+            processing: { text: "Đang xử lý", class: "status-processing" },
+            completed: { text: "Hoàn thành", class: "status-completed" },
+            cancelled: { text: "Đã hủy", class: "status-cancelled" }
+        };
+
+        // Function to create order card
+        function createOrderCard(order) {
+            const status = statusMap[order.status];
+            return `
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card order-card" onclick="viewOrderDetail('${order.id}')">
+                        <div class="card-body">
+                            <h5 class="card-title">Mã đơn: ${order.id}</h5>
+                            <p class="card-text">
+                                <strong>Sản phẩm:</strong> ${order.products}<br>
+                                <strong>Tổng tiền:</strong> ${order.total}
+                            </p>
+                            <span class="status-badge ${status.class}">
+                                ${status.text}
+                            </span>
+                            <small class="d-block mt-2 text-muted">
+                                Cập nhật: ${order.lastUpdate.toLocaleString()}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Function to view order detail
+        function viewOrderDetail(orderId) {
+            // Redirect to order detail page
+            window.location.href = `chiTietDonHang.html?id=${orderId}`;
+        }
+
+        // Function to show notification
+        function showNotification(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            document.getElementById('toastContainer').appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            // Remove toast after it's hidden
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+
+        // Function to update orders
+        function updateOrders() {
+            const orderList = document.getElementById('orderList');
+            orderList.innerHTML = orders.map(order => createOrderCard(order)).join('');
+        }
+
+        // Simulate real-time updates (replace with actual WebSocket or API calls)
+        function simulateUpdates() {
+            setInterval(() => {
+                const randomOrder = orders[Math.floor(Math.random() * orders.length)];
+                const statuses = Object.keys(statusMap);
+                const newStatus = statuses[Math.floor(Math.random() * statuses.length)];
+                
+                if (newStatus !== randomOrder.status) {
+                    const oldStatus = statusMap[randomOrder.status].text;
+                    const newStatusText = statusMap[newStatus].text;
+                    randomOrder.status = newStatus;
+                    randomOrder.lastUpdate = new Date();
+                    
+                    showNotification(
+                        `Đơn hàng ${randomOrder.id} đã chuyển trạng thái từ "${oldStatus}" sang "${newStatusText}"`,
+                        'success'
+                    );
+                    
+                    updateOrders();
+                }
+            }, 5000); // Update every 5 seconds
+        }
+
+        // Initialize the page
+        updateOrders();
+        simulateUpdates();
+    </script>
+</body>
+</html> 
